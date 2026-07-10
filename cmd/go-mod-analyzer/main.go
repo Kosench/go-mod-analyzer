@@ -1,3 +1,8 @@
+// Package main is the entry point for the go-mod-analyzer CLI tool.
+//
+// It contains minimal logic: wiring dependencies and launching.
+// All business logic lives in the internal/ directory.
+
 package main
 
 import (
