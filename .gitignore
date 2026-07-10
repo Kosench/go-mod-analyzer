@@ -1,0 +1,22 @@
+# Скомпилированные бинарники
+/bin/
+/dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+/go-mod-analyzer
+
+coverage.txt
+coverage.html
+
+.osv-cache.json
+
+vendor/
+
+.idea/
+.vscode/
+.DS_Store
+*.swp
