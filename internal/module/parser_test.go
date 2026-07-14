@@ -3,86 +3,72 @@ package module
 import (
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-// TestParseFile tests the go.mod parser.
-//
-// It uses a table-driven approach: several scenarios are described
-// in a slice of structs and run through the same code.
-
-func TestParseFile(t *testing.T) {
-	examplePath := filepath.Join("testdata", "go.mod")
-
+func TestModParser_Parse(t *testing.T) {
 	tests := []struct {
-		name      string
-		path      string
-		wantCount int
-		wantErr   bool
+		name        string
+		filePath    string
+		wantModules []Module
+		wantErr     bool
+		errContains string // подстрока в ошибке для точной проверки
 	}{
 		{
-			name:      "успешный парсинг реального go.mod",
-			path:      examplePath,
-			wantCount: 4, // cobra, viper, mod, testify
-			wantErr:   false,
+			name:     "valid valid.mod file",
+			filePath: filepath.Join("testdata", "valid.mod"),
+			wantModules: []Module{
+				{Path: "github.com/spf13/cobra", Version: "v1.8.0", Indirect: false},
+				{Path: "github.com/stretchr/testify", Version: "v1.8.4", Indirect: true},
+			},
+			wantErr: false,
 		},
 		{
-			name:      "успешный парсинг по пути к каталогу",
-			path:      "testdata", // каталог, а не файл
-			wantCount: 4,
-			wantErr:   false,
+			name:        "invalid valid.mod syntax",
+			filePath:    filepath.Join("testdata", "invalid.mod"),
+			wantErr:     true,
+			errContains: "parse modfile",
 		},
 		{
-			name:      "несуществующий файл возвращает ошибку",
-			path:      "testdata/nonexistent.go.mod",
-			wantCount: 0,
-			wantErr:   true,
+			name:        "non-existent file returns error",
+			filePath:    filepath.Join("testdata", "does_not_exist.mod"),
+			wantErr:     true,
+			errContains: "read file",
+		},
+		{
+			// ВАЖНЫЙ КЕЙС: доказываем, что парсер не занимается резолвом путей.
+			name:        "directory instead of file returns error",
+			filePath:    "testdata", // это папка, а не файл
+			wantErr:     true,
+			errContains: "read file",
 		},
 	}
 
+	p := NewParser()
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ParseFile(tt.path)
-
-			if (err != nil) != tt.wantErr {
-				t.Fatalf("ParseFile() error = %v, wantErr %v", err, tt.wantErr)
-			}
+			got, err := p.Parse(tt.filePath)
 
 			if tt.wantErr {
+				require.Error(t, err)
+				if tt.errContains != "" {
+					assert.Contains(t, err.Error(), tt.errContains,
+						"ошибка должна содержать контекст операции")
+				}
 				return
 			}
 
-			if len(got) != tt.wantCount {
-				t.Fatalf("ParseFile() вернул %d модулей, want %d", len(got), tt.wantCount)
-			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantModules, got,
+				"распарсенные модули должны точно совпадать с ожидаемыми")
 		})
 	}
 }
 
-func TestParseFile_Content(t *testing.T) {
-	modules, err := ParseFile(filepath.Join("testdata", "go.mod"))
-	if err != nil {
-		t.Fatalf("неожиданная ошибка: %v", err)
-	}
-
-	// Ожидаем cobra первой зависимостью (порядок = порядок в go.mod).
-	cobra := modules[0]
-	if cobra.Path != "github.com/spf13/cobra" {
-		t.Errorf("Path = %q, want %q", cobra.Path, "github.com/spf13/cobra")
-	}
-	if cobra.Version != "v1.8.0" {
-		t.Errorf("Version = %q, want %q", cobra.Version, "v1.8.0")
-	}
-	if cobra.Indirect {
-		t.Error("cobra должна быть прямой зависимостью, got Indirect=true")
-	}
-
-	// testify — последняя, indirect.
-	testify := modules[3]
-	if !testify.Indirect {
-		t.Error("testify должна быть indirect, got Indirect=false")
-	}
-}
-
+// TestModuleName проверяет метод Name() отдельно.
 func TestModuleName(t *testing.T) {
 	tests := []struct {
 		path string
@@ -92,13 +78,16 @@ func TestModuleName(t *testing.T) {
 		{"golang.org/x/mod", "mod"},
 		{"single", "single"}, // нет слеша — весь путь
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.path, func(t *testing.T) {
 			m := Module{Path: tt.path}
-			if got := m.Name(); got != tt.want {
-				t.Errorf("Name() = %q, want %q", got, tt.want)
-			}
+			assert.Equal(t, tt.want, m.Name())
 		})
 	}
+}
+
+// TestModParser_InterfaceCompliance — compile-time проверка,
+// что *modParser реализует интерфейс Parser.
+func TestModParser_InterfaceCompliance(t *testing.T) {
+	var _ Parser = NewParser()
 }

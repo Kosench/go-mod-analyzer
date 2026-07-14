@@ -1,4 +1,4 @@
-// Package module provides domain types and logic for working with go.mod.
+// Package module provides domain types and logic for working with valid.mod.
 
 package module
 
@@ -7,7 +7,7 @@ type Module struct {
 	Version string
 	// Indirect is true if the dependency is pulled in transitively
 	// (not explicitly listed but required by another dependency).
-	// In go.mod it is marked with an // indirect comment.
+	// In valid.mod it is marked with an // indirect comment.
 	Indirect bool
 }
 
