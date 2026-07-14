@@ -6,21 +6,25 @@
 package main
 
 import (
-	"fmt"
 	"os"
+
+	"github.com/Kosench/go-mod-analyzer/internal/cli"
 )
 
 var version = "dev"
 
 func main() {
-	if err := run(); err != nil {
-		fmt.Fprintf(os.Stderr, "go-mod-analyzer: %v\n", err)
-		os.Exit(1)
-	}
-}
+	root := cli.NewRootCmd(os.Stdout)
 
-func run() error {
-	fmt.Printf("go-mod-analyzer %s - dependency analysis\n", version)
-	fmt.Println("TODO: реализовать парсинг go.mod (Этап 1)")
-	return nil
+	// Добавляем флаг --version поверх стандартных команд
+	root.Flags().BoolP("version", "V", false, "показать версию и выйти")
+
+	root.Version = version
+	root.SetVersionTemplate(`go-mod-analyzer {{.Version}}` + "\n")
+
+	if err := root.Execute(); err != nil {
+		// cobra сам печатает ошибки, поэтому просто выходим с кодом 1.
+		os.Exit(1)
+
+	}
 }
