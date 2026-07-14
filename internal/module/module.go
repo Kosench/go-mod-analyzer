@@ -3,11 +3,8 @@
 package module
 
 type Module struct {
-	Path    string
-	Version string
-	// Indirect is true if the dependency is pulled in transitively
-	// (not explicitly listed but required by another dependency).
-	// In valid.mod it is marked with an // indirect comment.
+	Path     string
+	Version  string
 	Indirect bool
 }
 

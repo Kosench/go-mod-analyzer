@@ -9,22 +9,21 @@ import (
 	"os"
 
 	"github.com/Kosench/go-mod-analyzer/internal/cli"
+	"github.com/Kosench/go-mod-analyzer/internal/module"
 )
 
 var version = "dev"
 
 func main() {
-	root := cli.NewRootCmd(os.Stdout)
+	parser := module.NewParser()
 
-	// Добавляем флаг --version поверх стандартных команд
-	root.Flags().BoolP("version", "V", false, "показать версию и выйти")
+	root := cli.NewRootCmd(os.Stdout, parser, version)
 
+	root.Flags().BoolP("version", "V", false, "show version and exit")
 	root.Version = version
-	root.SetVersionTemplate(`go-mod-analyzer {{.Version}}` + "\n")
+	root.SetVersionTemplate("go-mod-analyzer {{.Version}}\n")
 
 	if err := root.Execute(); err != nil {
-		// cobra сам печатает ошибки, поэтому просто выходим с кодом 1.
 		os.Exit(1)
-
 	}
 }
